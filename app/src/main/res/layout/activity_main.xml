@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1a1a1a">
+
+    <!-- Top Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="#2d2d2d"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Voice Recorder AI"
+            android:textColor="#ffffff"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:contentDescription="Nastaveni" />
+
+        <ImageButton
+            android:id="@+id/btnRecordings"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_recent_history"
+            android:contentDescription="Nahravky" />
+    </LinearLayout>
+
+    <!-- Connection Status -->
+    <TextView
+        android:id="@+id/tvConnectionStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#333333"
+        android:padding="8dp"
+        android:text="Odpojeno"
+        android:textAlignment="center"
+        android:textColor="#ff6b6b"
+        android:textSize="12sp" />
+
+    <!-- Original Text (Top Half) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ORIGINAL"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/tvOriginalText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#ffffff"
+                android:textSize="18sp"
+                android:lineSpacingExtra="4dp"
+                android:hint="Prepis se zobrazi zde..."
+                android:textColorHint="#555555" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#444444" />
+
+    <!-- Translation Text (Bottom Half) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvTranslationLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PREKLAD (EN)"
+            android:textColor="#03DAC6"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/tvTranslatedText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#03DAC6"
+                android:textSize="18sp"
+                android:lineSpacingExtra="4dp"
+                android:hint="Preklad se zobrazi zde..."
+                android:textColorHint="#555555" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- Waveform View -->
+    <View
+        android:id="@+id/waveformView"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:background="#2d2d2d" />
+
+    <!-- Recording Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="#2d2d2d">
+
+        <!-- Timer -->
+        <TextView
+            android:id="@+id/tvTimer"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="#ffffff"
+            android:textSize="24sp"
+            android:fontFamily="monospace" />
+
+        <!-- Record/Stop Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabRecord"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="24dp"
+            android:src="@android:drawable/ic_btn_speak_now"
+            app:backgroundTint="#FF0000"
+            app:tint="#ffffff"
+            android:contentDescription="Nahrat" />
+
+        <!-- Pause Button -->
+        <ImageButton
+            android:id="@+id/btnPause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:drawable/ic_media_pause"
+            android:visibility="gone"
+            android:contentDescription="Pauza" />
+    </LinearLayout>
+
+    <!-- Recording Name Input (shown when stopping) -->
+    <LinearLayout
+        android:id="@+id/layoutRecordingName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="#333333"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/etRecordingName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Nazev nahravky"
+            android:textColor="#ffffff"
+            android:textColorHint="#888888"
+            android:backgroundTint="#03DAC6" />
+
+        <Button
+            android:id="@+id/btnSaveRecording"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ulozit"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+</LinearLayout>
