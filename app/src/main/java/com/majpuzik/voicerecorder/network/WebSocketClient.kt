@@ -43,10 +43,24 @@ class WebSocketClient {
         DISCONNECTED, CONNECTING, CONNECTED, ERROR
     }
 
-    fun connect(url: String, userId: String, recordingId: String) {
+    private var targetLanguage: String = "en"
+    private var llmProvider: String = "ollama"
+    private var llmApiKey: String = ""
+
+    fun connect(
+        url: String,
+        userId: String,
+        recordingId: String,
+        targetLang: String = "en",
+        provider: String = "ollama",
+        apiKey: String = ""
+    ) {
         this.serverUrl = url
         this.userId = userId
         this.recordingId = recordingId
+        this.targetLanguage = targetLang
+        this.llmProvider = provider
+        this.llmApiKey = apiKey
 
         _connectionState.value = ConnectionState.CONNECTING
 
@@ -59,11 +73,14 @@ class WebSocketClient {
                 Log.d(TAG, "WebSocket connected")
                 _connectionState.value = ConnectionState.CONNECTED
 
-                // Send initial config
+                // Send initial config with target language and LLM settings
                 val config = mapOf(
                     "type" to "config",
                     "user_id" to userId,
                     "recording_id" to recordingId,
+                    "target_language" to targetLanguage,
+                    "llm_provider" to llmProvider,
+                    "llm_api_key" to llmApiKey,
                     "timestamp" to System.currentTimeMillis()
                 )
                 webSocket.send(gson.toJson(config))
@@ -128,6 +145,21 @@ class WebSocketClient {
                 "user_id" to userId
             ) + data
             ws.send(gson.toJson(message))
+        }
+    }
+
+    fun requestTTS(text: String, voice: String = "cs") {
+        webSocket?.let { ws ->
+            if (_connectionState.value == ConnectionState.CONNECTED) {
+                val message = mapOf(
+                    "type" to "tts",
+                    "text" to text,
+                    "voice" to voice,
+                    "recording_id" to recordingId
+                )
+                Log.d(TAG, "Requesting TTS for: ${text.take(50)}...")
+                ws.send(gson.toJson(message))
+            }
         }
     }
 

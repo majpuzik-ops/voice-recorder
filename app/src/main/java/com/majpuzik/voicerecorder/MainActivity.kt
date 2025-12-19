@@ -11,15 +11,15 @@ import android.os.Bundle
 import android.os.IBinder
 import android.view.View
 import android.widget.*
+import com.majpuzik.voicerecorder.view.WaveformView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.majpuzik.voicerecorder.audio.TTSPlayer
 import com.majpuzik.voicerecorder.data.AppSettings
-import com.majpuzik.voicerecorder.data.ServerMessage
-import com.majpuzik.voicerecorder.network.WebSocketClient
 import com.majpuzik.voicerecorder.service.RecordingService
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -29,7 +29,7 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
 
     private lateinit var settings: AppSettings
-    private lateinit var webSocketClient: WebSocketClient
+    private lateinit var ttsPlayer: TTSPlayer
 
     // UI elements
     private lateinit var tvConnectionStatus: TextView
@@ -44,6 +44,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutRecordingName: LinearLayout
     private lateinit var etRecordingName: EditText
     private lateinit var btnSaveRecording: Button
+    private lateinit var waveformView: WaveformView
+    private lateinit var tvServerInfo: TextView
+    private lateinit var btnTTS: ImageButton
 
     private var recordingService: RecordingService? = null
     private var isServiceBound = false
@@ -67,6 +70,58 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 recordingService?.recordingTime?.collectLatest { time ->
                     tvTimer.text = formatTime(time)
+                }
+            }
+
+            // Observe amplitude for waveform
+            lifecycleScope.launch {
+                recordingService?.audioAmplitude?.collectLatest { amplitude ->
+                    waveformView.addAmplitude(amplitude)
+                }
+            }
+
+            // Observe transcription from service
+            lifecycleScope.launch {
+                recordingService?.transcription?.collectLatest { text ->
+                    if (text.isNotEmpty()) {
+                        tvOriginalText.text = text
+                    }
+                }
+            }
+
+            // Observe translation from service
+            lifecycleScope.launch {
+                recordingService?.translation?.collectLatest { text ->
+                    if (text.isNotEmpty()) {
+                        tvTranslatedText.text = text
+                    }
+                }
+            }
+
+            // Observe connection state from service
+            lifecycleScope.launch {
+                recordingService?.connectionState?.collectLatest { state ->
+                    updateConnectionStatus(state)
+                }
+            }
+
+            // Observe TTS audio from service
+            lifecycleScope.launch {
+                recordingService?.ttsAudio?.collectLatest { audioData ->
+                    audioData?.let { data ->
+                        if (data.isNotEmpty()) {
+                            ttsPlayer.playBase64Audio(
+                                data,
+                                onComplete = {
+                                    recordingService?.clearTTSAudio()
+                                },
+                                onError = { error ->
+                                    Toast.makeText(this@MainActivity, "TTS chyba: $error", Toast.LENGTH_SHORT).show()
+                                    recordingService?.clearTTSAudio()
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -93,11 +148,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         settings = AppSettings(this)
-        webSocketClient = WebSocketClient()
+        ttsPlayer = TTSPlayer(this)
 
         initViews()
         setupListeners()
-        observeWebSocket()
         updateTranslationLabel()
     }
 
@@ -114,6 +168,12 @@ class MainActivity : AppCompatActivity() {
         layoutRecordingName = findViewById(R.id.layoutRecordingName)
         etRecordingName = findViewById(R.id.etRecordingName)
         btnSaveRecording = findViewById(R.id.btnSaveRecording)
+        waveformView = findViewById(R.id.waveformView)
+        tvServerInfo = findViewById(R.id.tvServerInfo)
+        btnTTS = findViewById(R.id.btnTTS)
+
+        // Show server info
+        tvServerInfo.text = "Server: ${settings.serverUrl}"
     }
 
     private fun setupListeners() {
@@ -140,38 +200,40 @@ class MainActivity : AppCompatActivity() {
         btnSaveRecording.setOnClickListener {
             saveRecording()
         }
-    }
 
-    private fun observeWebSocket() {
-        lifecycleScope.launch {
-            webSocketClient.connectionState.collectLatest { state ->
-                updateConnectionStatus(state)
+        btnTTS.setOnClickListener {
+            val translatedText = tvTranslatedText.text.toString()
+            if (translatedText.isNotEmpty()) {
+                if (ttsPlayer.isPlaying()) {
+                    ttsPlayer.stop()
+                    Toast.makeText(this, "TTS zastaveno", Toast.LENGTH_SHORT).show()
+                } else {
+                    recordingService?.requestTTS(translatedText)
+                    Toast.makeText(this, "Prehravani prekladu...", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Zadny preklad k prehrani", Toast.LENGTH_SHORT).show()
             }
         }
-
-        lifecycleScope.launch {
-            webSocketClient.messages.collectLatest { message ->
-                handleServerMessage(message)
-            }
-        }
     }
 
-    private fun updateConnectionStatus(state: WebSocketClient.ConnectionState) {
+
+    private fun updateConnectionStatus(state: String) {
         runOnUiThread {
             when (state) {
-                WebSocketClient.ConnectionState.CONNECTED -> {
+                "connected" -> {
                     tvConnectionStatus.text = "Pripojeno k serveru"
                     tvConnectionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_light))
                 }
-                WebSocketClient.ConnectionState.CONNECTING -> {
+                "connecting" -> {
                     tvConnectionStatus.text = "Pripojuji..."
                     tvConnectionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_light))
                 }
-                WebSocketClient.ConnectionState.DISCONNECTED -> {
+                "disconnected" -> {
                     tvConnectionStatus.text = "Odpojeno"
                     tvConnectionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
                 }
-                WebSocketClient.ConnectionState.ERROR -> {
+                "error" -> {
                     tvConnectionStatus.text = "Chyba pripojeni"
                     tvConnectionStatus.setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
                 }
@@ -179,23 +241,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleServerMessage(message: ServerMessage) {
-        runOnUiThread {
-            when (message.type) {
-                "transcription" -> {
-                    val text = message.data as? String ?: return@runOnUiThread
-                    tvOriginalText.text = text
-                }
-                "translation" -> {
-                    val text = message.data as? String ?: return@runOnUiThread
-                    tvTranslatedText.text = text
-                }
-                "error" -> {
-                    Toast.makeText(this, "Server error: ${message.error}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
 
     private fun checkPermissionsAndRecord() {
         val permissions = mutableListOf(Manifest.permission.RECORD_AUDIO)
@@ -221,14 +266,10 @@ class MainActivity : AppCompatActivity() {
         tvOriginalText.text = ""
         tvTranslatedText.text = ""
 
-        // Connect to server
-        webSocketClient.connect(
-            settings.serverUrl,
-            settings.userId,
-            currentRecordingId
-        )
+        // Update server info
+        tvServerInfo.text = "Server: ${settings.serverUrl}"
 
-        // Start recording service
+        // Start recording service (service handles WebSocket connection)
         val intent = Intent(this, RecordingService::class.java).apply {
             action = RecordingService.ACTION_START
             putExtra(RecordingService.EXTRA_RECORDING_ID, currentRecordingId)
@@ -262,17 +303,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        // Save recording with transcription and translation
         recordingService?.saveRecording(name, tvOriginalText.text.toString(), tvTranslatedText.text.toString())
-
-        // Send end command to server
-        webSocketClient.sendCommand("end_recording", mapOf(
-            "name" to name,
-            "original_text" to tvOriginalText.text.toString(),
-            "translated_text" to tvTranslatedText.text.toString(),
-            "target_language" to settings.targetLanguage
-        ))
-
-        webSocketClient.disconnect()
 
         layoutRecordingName.visibility = View.GONE
         isRecording = false
@@ -293,13 +325,16 @@ class MainActivity : AppCompatActivity() {
                     fabRecord.setImageResource(android.R.drawable.ic_btn_speak_now)
                     btnPause.visibility = View.GONE
                     tvTimer.text = "00:00"
+                    waveformView.isActive = false
                 }
                 RecordingService.RecordingState.RECORDING -> {
                     fabRecord.setImageResource(android.R.drawable.ic_media_pause)
                     btnPause.visibility = View.VISIBLE
+                    waveformView.isActive = true
                 }
                 RecordingService.RecordingState.PAUSED -> {
                     fabRecord.setImageResource(android.R.drawable.ic_media_play)
+                    waveformView.isActive = false
                 }
             }
         }
@@ -328,9 +363,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        ttsPlayer.release()
         if (isServiceBound) {
             unbindService(serviceConnection)
         }
-        webSocketClient.disconnect()
     }
 }
