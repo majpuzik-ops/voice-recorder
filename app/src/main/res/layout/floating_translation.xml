@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#E6000000"
+    android:padding="16dp"
+    android:layout_margin="8dp">
+
+    <!-- Header with REC indicator and close button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvFloatingRec"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● REC"
+            android:textColor="#FF0000"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnCloseFloating"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="Zavrit" />
+    </LinearLayout>
+
+    <!-- Language prompt - shown when other person should speak -->
+    <TextView
+        android:id="@+id/tvFloatingPrompt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Please speak in English"
+        android:textColor="#03DAC6"
+        android:textSize="18sp"
+        android:textAlignment="center"
+        android:paddingTop="8dp"
+        android:visibility="gone" />
+
+    <!-- Translation text -->
+    <TextView
+        android:id="@+id/tvFloatingTranslation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="..."
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textAlignment="center"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:lineSpacingExtra="4dp" />
+
+</LinearLayout>

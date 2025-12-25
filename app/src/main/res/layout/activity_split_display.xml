@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:padding="16dp">
+
+    <!-- Recording indicator (top right) -->
+    <LinearLayout
+        android:id="@+id/layoutRecIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ivSplitRecIndicator"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@android:drawable/presence_busy"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvSplitRecStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="REC"
+            android:textColor="#FF0000"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="4dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Language prompt -->
+    <TextView
+        android:id="@+id/tvSplitPrompt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/layoutRecIndicator"
+        android:layout_marginTop="16dp"
+        android:text="Please speak in English"
+        android:textColor="#03DAC6"
+        android:textSize="20sp"
+        android:textAlignment="center"
+        android:visibility="gone" />
+
+    <!-- Translation text -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/tvSplitPrompt"
+        android:layout_marginTop="16dp"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/tvSplitTranslation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="..."
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:gravity="center"
+            android:lineSpacingExtra="6dp" />
+    </ScrollView>
+
+</RelativeLayout>

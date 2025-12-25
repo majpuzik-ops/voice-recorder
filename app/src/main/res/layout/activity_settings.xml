@@ -120,17 +120,82 @@
             android:backgroundTint="#03DAC6"
             android:inputType="textPassword" />
 
-        <!-- Language Selection -->
+        <!-- Transcription Provider Selection -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cilovy jazyk prekladu"
+            android:text="Prepis hlasu (STT)"
             android:textColor="#888888"
             android:textSize="12sp"
             android:layout_marginTop="24dp" />
 
         <Spinner
-            android:id="@+id/spinnerLanguage"
+            android:id="@+id/spinnerTranscriptionProvider"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#333333"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="API klic (pro OpenAI, Deepgram, AssemblyAI)"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+
+        <EditText
+            android:id="@+id/etTranscriptionApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="API klic..."
+            android:textColor="#ffffff"
+            android:textColorHint="#555555"
+            android:backgroundTint="#03DAC6"
+            android:inputType="textPassword" />
+
+        <!-- Language Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Zdrojovy jazyk (mluvim)"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            android:layout_marginTop="24dp" />
+
+        <Spinner
+            android:id="@+id/spinnerSourceLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#333333"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cilovy jazyk (preklad)"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            android:layout_marginTop="16dp" />
+
+        <Spinner
+            android:id="@+id/spinnerTargetLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#333333"
+            android:layout_marginTop="8dp" />
+
+        <!-- Display Mode for Translation -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rezim zobrazeni prekladu"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            android:layout_marginTop="24dp" />
+
+        <Spinner
+            android:id="@+id/spinnerDisplayMode"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:background="#333333"
@@ -179,6 +244,52 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true" />
+        </LinearLayout>
+
+        <!-- Call Recording Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nahravani hovoru"
+            android:textColor="#03DAC6"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginTop="32dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Automaticky nahravat hovory"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Vyzaduje opravneni telefonu"
+                    android:textColor="#888888"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/switchAutoCallRecording"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false" />
         </LinearLayout>
 
         <!-- User ID -->

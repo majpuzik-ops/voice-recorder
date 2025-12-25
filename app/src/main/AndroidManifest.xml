@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Call recording permissions -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT"
+        tools:ignore="ProtectedPermissions" />
 
     <application
         android:allowBackup="true"
@@ -45,6 +57,60 @@
         <service
             android:name=".service.RecordingService"
             android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <service
+            android:name=".service.CallRecordingService"
+            android:foregroundServiceType="microphone|phoneCall"
+            android:exported="false" />
+
+        <service
+            android:name=".FloatingTranslationService"
+            android:exported="false" />
+
+        <!-- Call state receiver -->
+        <receiver
+            android:name=".receiver.CallReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".SplitDisplayActivity"
+            android:exported="false"
+            android:label="Preklad"
+            android:theme="@style/Theme.VoiceRecorder.FullScreen"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="false" />
+
+        <!-- Fullscreen Translation Activity - covers entire internal display -->
+        <activity
+            android:name=".FullscreenTranslationActivity"
+            android:exported="false"
+            android:label="Preklad"
+            android:theme="@style/Theme.VoiceRecorder.FullScreen"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait" />
+
+        <!-- Cover Display Activity for Samsung Fold -->
+        <activity
+            android:name=".CoverDisplayActivity"
+            android:exported="false"
+            android:label="Preklad"
+            android:theme="@style/Theme.VoiceRecorder.FullScreen"
+            android:launchMode="singleTop"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation" />
+
+        <!-- Cover Display Presentation Service -->
+        <service
+            android:name=".service.CoverDisplayService"
             android:exported="false" />
 
     </application>

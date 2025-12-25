@@ -24,6 +24,22 @@
             android:textStyle="bold" />
 
         <ImageButton
+            android:id="@+id/btnShare"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_share"
+            android:contentDescription="Sdílet" />
+
+        <ImageButton
+            android:id="@+id/btnPrint"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_agenda"
+            android:contentDescription="Tisk" />
+
+        <ImageButton
             android:id="@+id/btnSettings"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -40,23 +56,47 @@
             android:contentDescription="Nahravky" />
     </LinearLayout>
 
-    <!-- Connection Status -->
-    <TextView
-        android:id="@+id/tvConnectionStatus"
+    <!-- Connection Status with Tailscale indicator -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:background="#333333"
         android:padding="8dp"
-        android:text="Odpojeno"
-        android:textAlignment="center"
-        android:textColor="#ff6b6b"
-        android:textSize="12sp" />
+        android:gravity="center_vertical">
 
-    <!-- Original Text (Top Half) -->
+        <ImageView
+            android:id="@+id/ivTailscale"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@android:drawable/presence_offline"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/tvConnectionStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Odpojeno"
+            android:textAlignment="center"
+            android:textColor="#ff6b6b"
+            android:textSize="12sp" />
+
+        <ImageButton
+            android:id="@+id/btnEnableTailscale"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_rotate"
+            android:visibility="gone"
+            android:contentDescription="Zapnout Tailscale" />
+    </LinearLayout>
+
+    <!-- Original Text (Top - larger) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="1.3"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -69,10 +109,12 @@
             android:textStyle="bold" />
 
         <ScrollView
+            android:id="@+id/scrollOriginal"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:fillViewport="true">
 
             <TextView
                 android:id="@+id/tvOriginalText"
@@ -92,11 +134,11 @@
         android:layout_height="1dp"
         android:background="#444444" />
 
-    <!-- Translation Text (Bottom Half) -->
+    <!-- Translation Text (Bottom - smaller) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="0.7"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -115,6 +157,27 @@
                 android:textColor="#03DAC6"
                 android:textSize="12sp"
                 android:textStyle="bold" />
+
+            <!-- Swap languages button -->
+            <ImageButton
+                android:id="@+id/btnSwapLanguages"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_revert"
+                android:contentDescription="Prohodit jazyky"
+                android:tint="#FFD700" />
+
+            <!-- Cover display button - prominent -->
+            <ImageButton
+                android:id="@+id/btnCoverDisplay"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@drawable/round_button_bg"
+                android:src="@drawable/ic_dual_screen"
+                android:contentDescription="Zobrazit pro protistranu"
+                android:padding="12dp"
+                android:elevation="4dp" />
 
             <ImageButton
                 android:id="@+id/btnTTS"
@@ -186,11 +249,23 @@
             android:id="@+id/fabRecord"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="24dp"
+            android:layout_marginHorizontal="16dp"
             android:src="@android:drawable/ic_btn_speak_now"
             app:backgroundTint="#FF0000"
             app:tint="#ffffff"
             android:contentDescription="Nahrat" />
+
+        <!-- Switch Speaker Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabSwitchSpeaker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_call"
+            app:backgroundTint="#03DAC6"
+            app:fabSize="normal"
+            app:tint="#000000"
+            android:visibility="gone"
+            android:contentDescription="Druhy recnik" />
 
         <!-- Pause Button -->
         <ImageButton

@@ -23,4 +23,10 @@
     <string name="server_url">Server URL</string>
     <string name="target_language">Cilovy jazyk</string>
     <string name="user_id">User ID</string>
+    <string name="waiting_for_speech">Cekam na rec...</string>
+    <string name="tailscale_not_connected">Tailscale neni pripojeno</string>
+    <string name="tailscale_connected">Tailscale pripojeno</string>
+    <string name="enable_tailscale">Zapnout Tailscale</string>
+    <string name="swap_languages">Prohodit jazyky</string>
+    <string name="cover_display">Zobrazit pro protistranu</string>
 </resources>

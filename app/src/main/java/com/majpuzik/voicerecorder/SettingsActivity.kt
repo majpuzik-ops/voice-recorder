@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.os.Build
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -18,14 +20,19 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var settings: AppSettings
     private lateinit var etServerUrl: EditText
-    private lateinit var spinnerLanguage: Spinner
+    private lateinit var spinnerSourceLanguage: Spinner
+    private lateinit var spinnerTargetLanguage: Spinner
     private lateinit var spinnerAudioSource: Spinner
     private lateinit var spinnerLlmProvider: Spinner
     private lateinit var etLlmApiKey: EditText
+    private lateinit var spinnerTranscriptionProvider: Spinner
+    private lateinit var etTranscriptionApiKey: EditText
+    private lateinit var spinnerDisplayMode: Spinner
     private lateinit var tvUserId: TextView
     private lateinit var tvMicTestLevel: TextView
     private lateinit var switchAutoTranscribe: Switch
     private lateinit var switchAutoTranslate: Switch
+    private lateinit var switchAutoCallRecording: Switch
     private lateinit var btnSave: Button
     private lateinit var btnTestConnection: Button
     private lateinit var btnTestMic: Button
@@ -49,7 +56,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun initViews() {
         etServerUrl = findViewById(R.id.etServerUrl)
-        spinnerLanguage = findViewById(R.id.spinnerLanguage)
+        spinnerSourceLanguage = findViewById(R.id.spinnerSourceLanguage)
+        spinnerTargetLanguage = findViewById(R.id.spinnerTargetLanguage)
         spinnerAudioSource = findViewById(R.id.spinnerAudioSource)
         spinnerLlmProvider = findViewById(R.id.spinnerLlmProvider)
         etLlmApiKey = findViewById(R.id.etLlmApiKey)
@@ -62,11 +70,15 @@ class SettingsActivity : AppCompatActivity() {
         btnTestMic = findViewById(R.id.btnTestMic)
         btnStopTestMic = findViewById(R.id.btnStopTestMic)
 
-        // Setup language spinner
+        // Setup language spinners
         val languages = settings.availableLanguages.values.toList()
-        val langAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, languages)
-        langAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerLanguage.adapter = langAdapter
+        val sourceLangAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, languages)
+        sourceLangAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerSourceLanguage.adapter = sourceLangAdapter
+
+        val targetLangAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, languages)
+        targetLangAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerTargetLanguage.adapter = targetLangAdapter
 
         // Setup audio source spinner
         val audioSources = settings.availableAudioSources.values.toList()
@@ -79,6 +91,24 @@ class SettingsActivity : AppCompatActivity() {
         val llmAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, llmProviders)
         llmAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerLlmProvider.adapter = llmAdapter
+
+        // Setup transcription provider spinner
+        spinnerTranscriptionProvider = findViewById(R.id.spinnerTranscriptionProvider)
+        etTranscriptionApiKey = findViewById(R.id.etTranscriptionApiKey)
+        val transcriptionProviders = settings.availableTranscriptionProviders.values.toList()
+        val transcriptionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, transcriptionProviders)
+        transcriptionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerTranscriptionProvider.adapter = transcriptionAdapter
+
+        // Setup display mode spinner
+        spinnerDisplayMode = findViewById(R.id.spinnerDisplayMode)
+        val displayModes = settings.availableDisplayModes.values.toList()
+        val displayModeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, displayModes)
+        displayModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerDisplayMode.adapter = displayModeAdapter
+
+        // Setup call recording switch
+        switchAutoCallRecording = findViewById(R.id.switchAutoCallRecording)
     }
 
     private fun loadSettings() {
@@ -88,10 +118,16 @@ class SettingsActivity : AppCompatActivity() {
         switchAutoTranslate.isChecked = settings.autoTranslate
         etLlmApiKey.setText(settings.llmApiKey)
 
-        // Select current language
-        val currentLangIndex = settings.availableLanguages.keys.indexOf(settings.targetLanguage)
-        if (currentLangIndex >= 0) {
-            spinnerLanguage.setSelection(currentLangIndex)
+        // Select current source language
+        val currentSourceIndex = settings.availableLanguages.keys.indexOf(settings.sourceLanguage)
+        if (currentSourceIndex >= 0) {
+            spinnerSourceLanguage.setSelection(currentSourceIndex)
+        }
+
+        // Select current target language
+        val currentTargetIndex = settings.availableLanguages.keys.indexOf(settings.targetLanguage)
+        if (currentTargetIndex >= 0) {
+            spinnerTargetLanguage.setSelection(currentTargetIndex)
         }
 
         // Select current audio source
@@ -105,6 +141,22 @@ class SettingsActivity : AppCompatActivity() {
         if (currentLlmIndex >= 0) {
             spinnerLlmProvider.setSelection(currentLlmIndex)
         }
+
+        // Select current transcription provider
+        val currentTranscriptionIndex = settings.availableTranscriptionProviders.keys.indexOf(settings.transcriptionProvider)
+        if (currentTranscriptionIndex >= 0) {
+            spinnerTranscriptionProvider.setSelection(currentTranscriptionIndex)
+        }
+        etTranscriptionApiKey.setText(settings.transcriptionApiKey)
+
+        // Select current display mode
+        val currentDisplayModeIndex = settings.availableDisplayModes.keys.indexOf(settings.displayMode)
+        if (currentDisplayModeIndex >= 0) {
+            spinnerDisplayMode.setSelection(currentDisplayModeIndex)
+        }
+
+        // Load call recording setting
+        switchAutoCallRecording.isChecked = settings.autoCallRecording
     }
 
     private fun setupListeners() {
@@ -123,6 +175,52 @@ class SettingsActivity : AppCompatActivity() {
         btnStopTestMic.setOnClickListener {
             stopMicTest()
         }
+
+        switchAutoCallRecording.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                requestCallRecordingPermissions()
+            }
+        }
+    }
+
+    private fun requestCallRecordingPermissions() {
+        val permissions = mutableListOf<String>()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.READ_PHONE_STATE)
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.READ_CALL_LOG)
+        }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.RECORD_AUDIO)
+        }
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        if (permissions.isNotEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Opravneni pro nahravani hovoru")
+                .setMessage("Pro automaticke nahravani hovoru potrebuji pristup k telefonu a mikrofonu. " +
+                        "Poznamka: Na nekterych telefonech nemusí nahravani druhe strany fungovat bez root opravneni.")
+                .setPositiveButton("Povolit") { _, _ ->
+                    ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 200)
+                }
+                .setNegativeButton("Zrusit") { _, _ ->
+                    switchAutoCallRecording.isChecked = false
+                }
+                .show()
+        }
     }
 
     private fun saveSettings() {
@@ -137,10 +235,15 @@ class SettingsActivity : AppCompatActivity() {
         settings.autoTranslate = switchAutoTranslate.isChecked
         settings.llmApiKey = etLlmApiKey.text.toString().trim()
 
-        // Get selected language code
-        val selectedLangIndex = spinnerLanguage.selectedItemPosition
-        val languageCode = settings.availableLanguages.keys.toList()[selectedLangIndex]
-        settings.targetLanguage = languageCode
+        // Get selected source language
+        val selectedSourceIndex = spinnerSourceLanguage.selectedItemPosition
+        val sourceLanguageCode = settings.availableLanguages.keys.toList()[selectedSourceIndex]
+        settings.sourceLanguage = sourceLanguageCode
+
+        // Get selected target language
+        val selectedTargetIndex = spinnerTargetLanguage.selectedItemPosition
+        val targetLanguageCode = settings.availableLanguages.keys.toList()[selectedTargetIndex]
+        settings.targetLanguage = targetLanguageCode
 
         // Get selected audio source
         val selectedAudioIndex = spinnerAudioSource.selectedItemPosition
@@ -151,6 +254,20 @@ class SettingsActivity : AppCompatActivity() {
         val selectedLlmIndex = spinnerLlmProvider.selectedItemPosition
         val llmProviderCode = settings.availableLlmProviders.keys.toList()[selectedLlmIndex]
         settings.llmProvider = llmProviderCode
+
+        // Get selected transcription provider
+        val selectedTranscriptionIndex = spinnerTranscriptionProvider.selectedItemPosition
+        val transcriptionProviderCode = settings.availableTranscriptionProviders.keys.toList()[selectedTranscriptionIndex]
+        settings.transcriptionProvider = transcriptionProviderCode
+        settings.transcriptionApiKey = etTranscriptionApiKey.text.toString().trim()
+
+        // Get selected display mode
+        val selectedDisplayModeIndex = spinnerDisplayMode.selectedItemPosition
+        val displayModeCode = settings.availableDisplayModes.keys.toList()[selectedDisplayModeIndex]
+        settings.displayMode = displayModeCode
+
+        // Save call recording setting
+        settings.autoCallRecording = switchAutoCallRecording.isChecked
 
         Toast.makeText(this, "Nastaveni ulozeno", Toast.LENGTH_SHORT).show()
         finish()
@@ -299,9 +416,21 @@ class SettingsActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startMicTest()
+        when (requestCode) {
+            100 -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startMicTest()
+                }
+            }
+            200 -> {
+                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                if (allGranted) {
+                    Toast.makeText(this, "Opravneni udelena - nahravani hovoru aktivni", Toast.LENGTH_SHORT).show()
+                } else {
+                    switchAutoCallRecording.isChecked = false
+                    Toast.makeText(this, "Nektera opravneni nebyla udelena", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

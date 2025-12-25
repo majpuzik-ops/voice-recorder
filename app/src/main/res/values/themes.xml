@@ -9,4 +9,15 @@
         <item name="colorOnSecondary">@android:color/black</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
     </style>
+
+    <!-- Fullscreen theme for cover display -->
+    <style name="Theme.VoiceRecorder.FullScreen" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="colorPrimary">#FF6200EE</item>
+        <item name="colorSecondary">#FF03DAC6</item>
+    </style>
 </resources>

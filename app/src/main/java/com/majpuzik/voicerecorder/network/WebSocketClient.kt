@@ -17,9 +17,17 @@ class WebSocketClient {
 
     companion object {
         private const val TAG = "WebSocketClient"
+
+        // Server fallback list - streaming server primary
+        val SERVERS = listOf(
+            "ws://100.90.154.98:8765",   // MacBook Pro - streaming server (primary)
+            "ws://100.96.204.120:8765"   // Backup
+        )
     }
 
     private var webSocket: WebSocket? = null
+    private var currentServerIndex = 0
+    private var connectAttempts = 0
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS)  // No timeout for WebSocket
@@ -43,46 +51,79 @@ class WebSocketClient {
         DISCONNECTED, CONNECTING, CONNECTED, ERROR
     }
 
+    private var sourceLanguage: String = "cs"
     private var targetLanguage: String = "en"
     private var llmProvider: String = "ollama"
     private var llmApiKey: String = ""
+    private var transcriptionProvider: String = "local"
+    private var transcriptionApiKey: String = ""
 
     fun connect(
         url: String,
         userId: String,
         recordingId: String,
+        sourceLang: String = "cs",
         targetLang: String = "en",
         provider: String = "ollama",
-        apiKey: String = ""
+        apiKey: String = "",
+        sttProvider: String = "local",
+        sttApiKey: String = ""
     ) {
         this.serverUrl = url
         this.userId = userId
         this.recordingId = recordingId
+        this.sourceLanguage = sourceLang
         this.targetLanguage = targetLang
         this.llmProvider = provider
         this.llmApiKey = apiKey
+        this.transcriptionProvider = sttProvider
+        this.transcriptionApiKey = sttApiKey
 
+        // Reset and try primary server first
+        currentServerIndex = 0
+        connectAttempts = 0
+        connectToServer()
+    }
+
+    private fun connectToServer() {
+        if (currentServerIndex >= SERVERS.size) {
+            Log.e(TAG, "All servers failed")
+            _connectionState.value = ConnectionState.ERROR
+            scope.launch {
+                _messages.emit(ServerMessage("error", error = "Vsechny servery nedostupne"))
+            }
+            return
+        }
+
+        val serverToTry = SERVERS[currentServerIndex]
+        Log.d(TAG, "Connecting to server $currentServerIndex: $serverToTry")
         _connectionState.value = ConnectionState.CONNECTING
 
         val request = Request.Builder()
-            .url("$url?user_id=$userId&recording_id=$recordingId")
+            .url("$serverToTry?user_id=$userId&recording_id=$recordingId")
             .build()
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.d(TAG, "WebSocket connected")
+                Log.d(TAG, "WebSocket connected to $serverToTry")
+                serverUrl = serverToTry
+                connectAttempts = 0
                 _connectionState.value = ConnectionState.CONNECTED
 
-                // Send initial config with target language and LLM settings
+                // Send initial config with source/target language and LLM settings
                 val config = mapOf(
                     "type" to "config",
                     "user_id" to userId,
                     "recording_id" to recordingId,
+                    "source_language" to sourceLanguage,
                     "target_language" to targetLanguage,
                     "llm_provider" to llmProvider,
                     "llm_api_key" to llmApiKey,
+                    "transcription_provider" to transcriptionProvider,
+                    "transcription_api_key" to transcriptionApiKey,
                     "timestamp" to System.currentTimeMillis()
                 )
+                Log.d(TAG, "Sending config: source=$sourceLanguage, target=$targetLanguage")
                 webSocket.send(gson.toJson(config))
             }
 
@@ -113,10 +154,21 @@ class WebSocketClient {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "WebSocket error: ${t.message}")
-                _connectionState.value = ConnectionState.ERROR
-                scope.launch {
-                    _messages.emit(ServerMessage("error", error = t.message))
+                Log.e(TAG, "WebSocket error on ${SERVERS[currentServerIndex]}: ${t.message}")
+
+                // Try next server
+                currentServerIndex++
+                if (currentServerIndex < SERVERS.size) {
+                    Log.d(TAG, "Trying fallback server...")
+                    scope.launch {
+                        _messages.emit(ServerMessage("info", data = "Zkousim backup server..."))
+                    }
+                    connectToServer()
+                } else {
+                    _connectionState.value = ConnectionState.ERROR
+                    scope.launch {
+                        _messages.emit(ServerMessage("error", error = "Vsechny servery nedostupne: ${t.message}"))
+                    }
                 }
             }
         })
