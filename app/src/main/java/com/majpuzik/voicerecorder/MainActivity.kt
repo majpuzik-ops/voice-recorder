@@ -35,7 +35,10 @@ import com.majpuzik.voicerecorder.service.RecordingService
 import com.majpuzik.voicerecorder.service.CoverDisplayService
 import com.majpuzik.voicerecorder.util.TailscaleHelper
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executor
@@ -83,11 +86,22 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
     private lateinit var btnTTS: ImageButton
     private lateinit var btnShare: ImageButton
     private lateinit var btnPrint: ImageButton
-    private lateinit var btnSwapLanguages: ImageButton
+    private lateinit var btnSwapLanguages: FloatingActionButton
     private lateinit var btnCoverDisplay: ImageButton
     private lateinit var ivTailscale: ImageView
     private lateinit var btnEnableTailscale: ImageButton
-    private lateinit var fabSwitchSpeaker: FloatingActionButton
+    private lateinit var redIndicator: View
+
+    // Red blinking indicator for foreign speaker
+    private val blinkHandler = Handler(Looper.getMainLooper())
+    private var isBlinkOn = false
+    private val blinkRunnable = object : Runnable {
+        override fun run() {
+            isBlinkOn = !isBlinkOn
+            redIndicator.visibility = if (isBlinkOn) View.VISIBLE else View.INVISIBLE
+            blinkHandler.postDelayed(this, 500) // Blink every 500ms
+        }
+    }
 
     private var recordingService: RecordingService? = null
     private var isServiceBound = false
@@ -138,30 +152,32 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
             // Observe transcription from service
             lifecycleScope.launch {
                 recordingService?.transcription?.collectLatest { text ->
-                    if (text.isNotEmpty()) {
+                    runOnUiThread {
                         tvOriginalText.text = text
-                        // Auto-scroll to bottom
                         scrollOriginal.post {
                             scrollOriginal.fullScroll(View.FOCUS_DOWN)
                         }
-                        // Debug
-                        android.util.Log.d("MainActivity", "Transcription: $text")
                     }
                 }
             }
 
-            // Observe translation from service
-            lifecycleScope.launch {
-                recordingService?.translation?.collectLatest { text ->
+            // Observe translation from service - THIS MUST UPDATE MAIN SCREEN!
+            // Using onEach + launchIn for more robust flow collection
+            recordingService?.translation?.onEach { text ->
+                Log.d("MainActivity", "=== TRANSLATION FLOW: '$text' ===")
+                runOnUiThread {
+                    Log.d("MainActivity", "=== UI UPDATE: '$text' ===")
+                    // Show big debug toast
                     if (text.isNotEmpty()) {
-                        tvTranslatedText.text = text
-                        // Update cover display
-                        updateCoverDisplay()
-                        // Debug
-                        android.util.Log.d("MainActivity", "Translation: $text")
+                        Toast.makeText(this@MainActivity, "PREKLAD: $text", Toast.LENGTH_LONG).show()
                     }
+                    // ALWAYS update main screen translation (even if empty to show initial state)
+                    tvTranslatedText.text = text.ifEmpty { "Čekám na překlad..." }
+                    tvTranslatedText.visibility = View.VISIBLE
+                    // Update cover display with translation
+                    updateCoverDisplay()
                 }
-            }
+            }?.launchIn(lifecycleScope)
 
             // Observe connection state from service
             lifecycleScope.launch {
@@ -194,19 +210,28 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
 
             // Observe speaker mode for automatic cover display updates
             lifecycleScope.launch {
-                recordingService?.speakerMode?.collectLatest { mode ->
-                    when (mode) {
-                        RecordingService.SpeakerMode.SELF -> {
-                            isOtherPersonSpeaking = false
-                            btnSwapLanguages.setColorFilter(ContextCompat.getColor(this@MainActivity, android.R.color.holo_orange_light))
+                recordingService?.speakerMode?.collect { mode ->
+                    runOnUiThread {
+                        when (mode) {
+                            RecordingService.SpeakerMode.SELF -> {
+                                isOtherPersonSpeaking = false
+                                // Yellow = I'm speaking
+                                btnSwapLanguages.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_orange_light))
+                                stopRedBlinking()
+                            }
+                            RecordingService.SpeakerMode.EXTERNAL -> {
+                                isOtherPersonSpeaking = true
+                                // Green = Other person speaking
+                                btnSwapLanguages.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                    ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light))
+                                // ALWAYS start red blinking when in EXTERNAL mode during recording
+                                startRedBlinking()
+                            }
                         }
-                        RecordingService.SpeakerMode.EXTERNAL -> {
-                            isOtherPersonSpeaking = true
-                            btnSwapLanguages.setColorFilter(ContextCompat.getColor(this@MainActivity, android.R.color.holo_green_light))
-                        }
+                        // Update cover display with prompt
+                        updateCoverDisplay()
                     }
-                    // Update existing cover display
-                    updateCoverDisplay()
                 }
             }
         }
@@ -228,6 +253,26 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
         }
     }
 
+    // Broadcast receiver for translation updates - BACKUP for main screen
+    private val translationReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            val text = intent?.getStringExtra("text") ?: ""
+            Log.d("MainActivity", "=== BROADCAST RECEIVED: '$text' ===")
+            if (text.isNotEmpty()) {
+                runOnUiThread {
+                    Log.d("MainActivity", "=== BROADCAST UI UPDATE: '$text' ===")
+                    // Show big debug toast from broadcast
+                    Toast.makeText(this@MainActivity, "BC PREKLAD: $text", Toast.LENGTH_LONG).show()
+                    // Update main screen translation
+                    tvTranslatedText.text = text
+                    tvTranslatedText.visibility = View.VISIBLE
+                    // Update cover display
+                    updateCoverDisplay()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -241,6 +286,9 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
         updateTranslationLabel()
         startTailscaleMonitoring()
         initDualScreenMode()
+
+        // Register translation receiver
+        registerReceiver(translationReceiver, android.content.IntentFilter("com.majpuzik.voicerecorder.TRANSLATION_UPDATE"), RECEIVER_NOT_EXPORTED)
     }
 
     private fun initViews() {
@@ -266,7 +314,7 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
         btnCoverDisplay = findViewById(R.id.btnCoverDisplay)
         ivTailscale = findViewById(R.id.ivTailscale)
         btnEnableTailscale = findViewById(R.id.btnEnableTailscale)
-        fabSwitchSpeaker = findViewById(R.id.fabSwitchSpeaker)
+        redIndicator = findViewById(R.id.redIndicator)
 
         // Show server info
         tvServerInfo.text = "Server: ${settings.serverUrl}"
@@ -321,7 +369,8 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
         }
 
         btnSwapLanguages.setOnClickListener {
-            swapLanguages()
+            // Big button for switching speaker mode (includes language swap)
+            toggleSpeakerMode()
         }
 
         btnCoverDisplay.setOnClickListener {
@@ -333,9 +382,6 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
             Toast.makeText(this, "Otviram Tailscale...", Toast.LENGTH_SHORT).show()
         }
 
-        fabSwitchSpeaker.setOnClickListener {
-            toggleSpeakerMode()
-        }
     }
 
     private fun toggleSpeakerMode() {
@@ -367,18 +413,32 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
     private fun updateSpeakerButtonUI(mode: RecordingService.SpeakerMode) {
         when (mode) {
             RecordingService.SpeakerMode.SELF -> {
-                fabSwitchSpeaker.setImageResource(android.R.drawable.ic_menu_call)
-                fabSwitchSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#03DAC6")
+                // Yellow = I'm speaking
+                btnSwapLanguages.setImageResource(android.R.drawable.ic_menu_revert)
+                btnSwapLanguages.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, android.R.color.holo_orange_light)
                 )
             }
             RecordingService.SpeakerMode.EXTERNAL -> {
-                fabSwitchSpeaker.setImageResource(android.R.drawable.ic_btn_speak_now)
-                fabSwitchSpeaker.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    android.graphics.Color.parseColor("#FF6B6B")
+                // Green = Other person speaking
+                btnSwapLanguages.setImageResource(android.R.drawable.ic_menu_revert)
+                btnSwapLanguages.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, android.R.color.holo_green_light)
                 )
             }
         }
+    }
+
+    private fun startRedBlinking() {
+        blinkHandler.removeCallbacks(blinkRunnable)
+        isBlinkOn = false
+        blinkHandler.post(blinkRunnable)
+    }
+
+    private fun stopRedBlinking() {
+        blinkHandler.removeCallbacks(blinkRunnable)
+        redIndicator.visibility = View.GONE
+        isBlinkOn = false
     }
 
     private fun shareConversation() {
@@ -590,21 +650,21 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
                 RecordingService.RecordingState.IDLE -> {
                     fabRecord.setImageResource(android.R.drawable.ic_btn_speak_now)
                     btnPause.visibility = View.GONE
-                    fabSwitchSpeaker.visibility = View.GONE
                     tvTimer.text = "00:00"
                     waveformView.isActive = false
-                    // Reset speaker mode
+                    // Reset speaker mode UI and stop blinking
                     updateSpeakerButtonUI(RecordingService.SpeakerMode.SELF)
+                    stopRedBlinking()
                 }
                 RecordingService.RecordingState.RECORDING -> {
                     fabRecord.setImageResource(android.R.drawable.ic_media_pause)
                     btnPause.visibility = View.VISIBLE
-                    fabSwitchSpeaker.visibility = View.VISIBLE
                     waveformView.isActive = true
                 }
                 RecordingService.RecordingState.PAUSED -> {
                     fabRecord.setImageResource(android.R.drawable.ic_media_play)
                     waveformView.isActive = false
+                    stopRedBlinking()
                 }
             }
         }
@@ -1001,56 +1061,44 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
         }
     }
 
-    // Update content on cover display
+    // Update content on cover display - ONLY TRANSLATION for foreigner!
     private fun updateCoverDisplayContent() {
         windowAreaSession?.let { session ->
-            val translation = tvTranslatedText.text.toString()
-            val prompt = getLanguagePrompt(settings.sourceLanguage)
+            // Get translation DIRECTLY from service, not from UI
+            val translation = recordingService?.translation?.value ?: ""
+            val targetLang = settings.availableLanguages[settings.targetLanguage] ?: settings.targetLanguage
 
             // Create layout for cover display
             val container = LinearLayout(session.context).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(Color.parseColor("#1a1a2e"))
+                setBackgroundColor(Color.BLACK)
                 gravity = Gravity.CENTER
-                setPadding(32, 32, 32, 32)
+                setPadding(48, 48, 48, 48)
             }
 
-            // Show prompt if other person should speak
+            // Show prompt when foreigner should speak (EXTERNAL mode)
             if (isOtherPersonSpeaking) {
                 val promptView = TextView(session.context).apply {
-                    text = prompt
-                    textSize = 24f
-                    setTextColor(Color.parseColor("#03DAC6"))
+                    text = "🎤 Mluvte $targetLang"
+                    textSize = 28f
+                    setTextColor(Color.parseColor("#FF6B6B"))
                     gravity = Gravity.CENTER
                     setPadding(16, 16, 16, 32)
                 }
                 container.addView(promptView)
             }
 
-            // Translation text - large and readable
+            // Translation text ONLY - large and readable
             val translationView = TextView(session.context).apply {
-                text = if (translation.isNotEmpty()) translation else "Cekam na preklad..."
-                textSize = 36f
+                text = translation
+                textSize = 42f
                 setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER
                 setPadding(16, 16, 16, 16)
             }
             container.addView(translationView)
 
-            // Recording indicator
-            if (isRecording) {
-                val recordingIndicator = TextView(session.context).apply {
-                    text = "● NAHRAVANI"
-                    textSize = 18f
-                    setTextColor(Color.RED)
-                    gravity = Gravity.CENTER
-                    setPadding(16, 32, 16, 16)
-                }
-                container.addView(recordingIndicator)
-            }
-
             session.setContentView(container)
-            android.util.Log.d("DualScreen", "Updated cover display content: $translation")
         }
     }
 
@@ -1072,6 +1120,12 @@ class MainActivity : AppCompatActivity(), WindowAreaPresentationSessionCallback 
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            unregisterReceiver(translationReceiver)
+        } catch (e: Exception) {
+            // Receiver may not be registered
+        }
+        stopRedBlinking()
         stopTailscaleMonitoring()
         windowAreaSession?.close()
         closeCoverDisplay()

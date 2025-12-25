@@ -18,10 +18,10 @@ class WebSocketClient {
     companion object {
         private const val TAG = "WebSocketClient"
 
-        // Server fallback list - streaming server primary
+        // Server fallback list - MacBook primary
         val SERVERS = listOf(
-            "ws://100.90.154.98:8765",   // MacBook Pro - streaming server (primary)
-            "ws://100.96.204.120:8765"   // Backup
+            "ws://100.90.154.98:8765",   // MacBook Pro - primary
+            "ws://100.96.204.120:8765"   // DGX - backup
         )
     }
 
@@ -128,14 +128,17 @@ class WebSocketClient {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                Log.d(TAG, "Received: $text")
+                Log.d(TAG, "=== RAW WS MESSAGE: $text ===")
                 try {
                     val message = gson.fromJson(text, ServerMessage::class.java)
+                    Log.d(TAG, "=== PARSED: type=${message.type}, data=${message.data} ===")
                     scope.launch {
                         _messages.emit(message)
+                        Log.d(TAG, "=== EMITTED TO FLOW ===")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing message: ${e.message}")
+                    Log.e(TAG, "=== PARSE ERROR: ${e.message} ===")
+                    e.printStackTrace()
                 }
             }
 

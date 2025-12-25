@@ -171,6 +171,10 @@ class RecordingService : Service() {
         audioFile = File(recordingsDir, "$currentRecordingId.wav")
 
         // Connect to server with LLM and transcription settings
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(this, "Connecting to ${settings.serverUrl}", android.widget.Toast.LENGTH_LONG).show()
+        }
+
         webSocketClient.connect(
             settings.serverUrl,
             settings.userId,
@@ -185,6 +189,9 @@ class RecordingService : Service() {
 
         // Observe WebSocket messages
         webSocketClient.connectionState.onEach { state ->
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(this, "WS State: $state", android.widget.Toast.LENGTH_SHORT).show()
+            }
             _connectionState.value = when (state) {
                 WebSocketClient.ConnectionState.CONNECTED -> "connected"
                 WebSocketClient.ConnectionState.CONNECTING -> "connecting"
@@ -194,22 +201,42 @@ class RecordingService : Service() {
         }.launchIn(scope)
 
         webSocketClient.messages.onEach { message ->
+            Log.d(TAG, "=== MESSAGE RECEIVED: type=${message.type}, data=${message.data} ===")
+
+            // Show toast for every message (debug)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(this@RecordingService,
+                    "MSG: ${message.type}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+
             when (message.type) {
                 "transcription" -> {
-                    val text = message.data as? String ?: ""
+                    // Server sends "text" field, not "data"
+                    val text = message.text ?: message.data as? String ?: message.data?.toString() ?: ""
+                    Log.d(TAG, "Transcription: $text")
                     if (text.isNotEmpty()) {
                         _transcription.value = if (_transcription.value.isEmpty()) text
                                                else _transcription.value + " " + text
                     }
-                    Log.d(TAG, "Transcription received: $text")
                 }
                 "translation" -> {
-                    val text = message.data as? String ?: ""
-                    if (text.isNotEmpty()) {
-                        _translation.value = if (_translation.value.isEmpty()) text
-                                             else _translation.value + " " + text
+                    // Server sends "text" field, not "data"
+                    val text = message.text ?: message.data as? String ?: message.data?.toString() ?: ""
+                    Log.d(TAG, "=== TRANSLATION RECEIVED: $text ===")
+
+                    // DEBUG: Show what we extracted
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(this@RecordingService,
+                            "TR: text=${message.text}, data=${message.data}, final=$text",
+                            android.widget.Toast.LENGTH_LONG).show()
                     }
-                    Log.d(TAG, "Translation received: $text")
+                    _translation.value = text
+
+                    // Broadcast to MainActivity (explicit package for Android 14+)
+                    sendBroadcast(Intent("com.majpuzik.voicerecorder.TRANSLATION_UPDATE").apply {
+                        setPackage(packageName)
+                        putExtra("text", text)
+                    })
 
                     // Update cover display with translation if in SELF mode
                     if (_speakerMode.value == SpeakerMode.SELF) {

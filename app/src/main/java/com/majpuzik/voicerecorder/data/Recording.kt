@@ -46,6 +46,7 @@ data class TranslationResult(
 data class ServerMessage(
     val type: String,  // "transcription", "translation", "error", "status"
     val data: Any? = null,
+    val text: String? = null,  // Server sends "text" for translations
     val recordingId: String? = null,
     val error: String? = null
 )

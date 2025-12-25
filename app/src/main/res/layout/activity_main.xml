@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Red blinking indicator overlay - VISIBLE border when foreigner should speak -->
+    <View
+        android:id="@+id/redIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="16dp"
+        android:layout_gravity="top"
+        android:background="#FF0000"
+        android:elevation="10dp"
+        android:visibility="gone" />
+
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -158,15 +172,17 @@
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
-            <!-- Swap languages button -->
-            <ImageButton
+            <!-- Big Switch Speaker button - simple swap icon -->
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/btnSwapLanguages"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:src="@android:drawable/ic_menu_revert"
-                android:contentDescription="Prohodit jazyky"
-                android:tint="#FFD700" />
+                app:backgroundTint="#FFD700"
+                app:fabSize="normal"
+                app:tint="#000000"
+                android:contentDescription="Přepnout mluvčího"
+                app:elevation="8dp" />
 
             <!-- Cover display button - prominent -->
             <ImageButton
@@ -255,17 +271,7 @@
             app:tint="#ffffff"
             android:contentDescription="Nahrat" />
 
-        <!-- Switch Speaker Button -->
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fabSwitchSpeaker"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_menu_call"
-            app:backgroundTint="#03DAC6"
-            app:fabSize="normal"
-            app:tint="#000000"
-            android:visibility="gone"
-            android:contentDescription="Druhy recnik" />
+        <!-- Switch Speaker Button - removed, using btnSwapLanguages above -->
 
         <!-- Pause Button -->
         <ImageButton
@@ -306,3 +312,4 @@
     </LinearLayout>
 
 </LinearLayout>
+</FrameLayout>
