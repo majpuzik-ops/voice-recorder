@@ -106,11 +106,11 @@
             android:contentDescription="Zapnout Tailscale" />
     </LinearLayout>
 
-    <!-- Original Text (Top - larger) -->
+    <!-- Original Text (Top - equal size with translation) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1.3"
+        android:layout_weight="1"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -148,11 +148,11 @@
         android:layout_height="1dp"
         android:background="#444444" />
 
-    <!-- Translation Text (Bottom - smaller) -->
+    <!-- Translation Text (Bottom - equal size with original) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="0.7"
+        android:layout_weight="1"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -169,31 +169,19 @@
                 android:layout_weight="1"
                 android:text="PREKLAD (EN)"
                 android:textColor="#03DAC6"
-                android:textSize="12sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <!-- Big Switch Speaker button - simple swap icon -->
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/btnSwapLanguages"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:src="@android:drawable/ic_menu_revert"
-                app:backgroundTint="#FFD700"
-                app:fabSize="normal"
-                app:tint="#000000"
-                android:contentDescription="Přepnout mluvčího"
-                app:elevation="8dp" />
-
-            <!-- Cover display button - prominent -->
+            <!-- Cover display button - smaller -->
             <ImageButton
                 android:id="@+id/btnCoverDisplay"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/round_button_bg"
                 android:src="@drawable/ic_dual_screen"
                 android:contentDescription="Zobrazit pro protistranu"
-                android:padding="12dp"
-                android:elevation="4dp" />
+                android:padding="8dp"
+                android:layout_marginEnd="8dp" />
 
             <ImageButton
                 android:id="@+id/btnTTS"
@@ -206,21 +194,45 @@
         </LinearLayout>
 
         <ScrollView
+            android:id="@+id/scrollTranslation"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:fillViewport="true">
 
             <TextView
                 android:id="@+id/tvTranslatedText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="#03DAC6"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:lineSpacingExtra="4dp"
                 android:hint="Preklad se zobrazi zde..."
                 android:textColorHint="#555555" />
         </ScrollView>
+    </LinearLayout>
+
+    <!-- Big Switch Speaker Button - moved to separate row for visibility -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="#252525"
+        android:padding="8dp">
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btnSwapLanguages"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_revert"
+            app:backgroundTint="#FFD700"
+            app:fabSize="large"
+            app:tint="#000000"
+            android:contentDescription="Přepnout mluvčího"
+            app:elevation="8dp" />
+
     </LinearLayout>
 
     <!-- Waveform View -->
