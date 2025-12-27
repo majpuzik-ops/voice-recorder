@@ -228,7 +228,7 @@
             android:layout_height="wrap_content"
             android:src="@android:drawable/ic_menu_revert"
             app:backgroundTint="#FFD700"
-            app:fabSize="large"
+            app:fabSize="normal"
             app:tint="#000000"
             android:contentDescription="Přepnout mluvčího"
             app:elevation="8dp" />
